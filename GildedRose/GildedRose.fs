@@ -2,7 +2,13 @@
 
 open System.Collections.Generic
 
+type ItemQuality = int 
+
 type Item = { Name: string; SellIn: int; Quality: int }
+
+type ModifierRule = { CanModify : Item -> bool; Modify : Item->Item }
+
+type ModifierRules = ModifierRule list
 
 let updateSellIn item = 
     if item.Name <> "Sulfuras, Hand of Ragnaros" then                 
@@ -16,9 +22,39 @@ let downgradeQuality item =
     else
         item
 
+let addOneQualityPoint item = { Name = item.Name; SellIn = item.SellIn; Quality = item.Quality+1}
+
+let modifyQuality modifer canModify item = 
+    if (canModify item) then
+        modifer item
+    else 
+        item
+
+let rec applyModifiersRulesQuality modifierRules item = 
+    match modifierRules with 
+        | head::tail -> 
+            if head.CanModify item then
+                head.Modify item |> applyModifiersRulesQuality tail
+            else
+                item
+        | [] -> item
+
+let filterOverFiftyQuality item = item.Quality < 50
+
+let filterBackStage item = item.Name = "Backstage passes to a TAFKAL80ETC concert"
+
+let filterSellIn value item = item.SellIn < value
+
+let filter2State item = filterBackStage item && filterSellIn 11 item && filterOverFiftyQuality item
+
+let filter3State item = filterSellIn 6 item && filterOverFiftyQuality item
 
 type GildedRose(items:IList<Item>) =
     let Items = items
+
+    let specialItemRule = { CanModify = filterOverFiftyQuality; Modify = addOneQualityPoint }::
+                          { CanModify = filter2State; Modify = addOneQualityPoint }::
+                          { CanModify = filter3State; Modify = addOneQualityPoint }::[]
 
     member this.UpdateQuality() =
         for i = 0 to Items.Count - 1 do
@@ -27,15 +63,7 @@ type GildedRose(items:IList<Item>) =
                 Items.[i] <- downgradeQuality Items.[i]
             // Special item quality update
             else
-               if Items.[i].Quality < 50 then
-                    Items.[i] <- { Items.[i] with Quality = (Items.[i].Quality + 1) } 
-                    if Items.[i].Name = "Backstage passes to a TAFKAL80ETC concert" then
-                        if Items.[i].SellIn < 11 then
-                            if Items.[i].Quality < 50 then
-                                Items.[i] <- { Items.[i] with Quality = (Items.[i].Quality + 1) } 
-                        if Items.[i].SellIn < 6 then
-                            if Items.[i].Quality < 50 then
-                                Items.[i] <- { Items.[i] with Quality = (Items.[i].Quality + 1) } 
+                Items.[i] <- applyModifiersRulesQuality specialItemRule Items.[i]
             // Update SellIn
             Items.[i] <- (updateSellIn Items.[i])
             // update quality for special item once again
