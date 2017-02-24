@@ -1,0 +1,25 @@
+﻿<Properties StartupConfiguration="{2660EF56-B4C1-4DCF-B106-278211BD26C6}|Default">
+  <MonoDevelop.Ide.Workbench ActiveDocument="Kata_Refactoring_GildedRose_FSharp État">
+    <Files>
+      <File FileName="GildedRose/GildedRose.fs" Line="45" Column="64" />
+      <File FileName="GildedRose.Tests/GildedRoseTest.fs" Line="145" Column="27" />
+      <File FileName="Kata_Refactoring_GildedRose_FSharp État" />
+    </Files>
+    <Pads>
+      <Pad Id="MonoDevelop.UnitTesting.TestPad">
+        <State name="__root__">
+          <Node name="GildedRose" expanded="True" selected="True">
+            <Node name="GildedRose.Tests" expanded="True" />
+          </Node>
+        </State>
+      </Pad>
+    </Pads>
+  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
+  <MonoDevelop.Ide.ItemProperties.GildedRose PreferredExecutionTarget="MonoDevelop.Default" />
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore />
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+  <MultiItemStartupConfigurations />
+</Properties>
