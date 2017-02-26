@@ -39,6 +39,19 @@ let rec applyModifiersRulesQuality modifierRules item =
                 item
         | [] -> item
 
+let updateIfOutdated item = 
+    if item.SellIn < 0 then
+        match item.Name with
+            | "Aged Brie" -> 
+                if item.Quality < 50 then
+                    { item with Quality   = (item.Quality + 1) }
+                else
+                    item
+            | "Backstage passes to a TAFKAL80ETC concert" -> { item with Quality = 0 } 
+            | _ -> downgradeQuality item
+    else
+        item
+
 let filterOverFiftyQuality item = item.Quality < 50
 
 let filterBackStage item = item.Name = "Backstage passes to a TAFKAL80ETC concert"
@@ -67,15 +80,7 @@ type GildedRose(items:IList<Item>) =
             // Update SellIn
             Items.[i] <- (updateSellIn Items.[i])
             // update quality for special item once again
-            if Items.[i].SellIn < 0 then
-                if Items.[i].Name <> "Aged Brie" then
-                    if Items.[i].Name <> "Backstage passes to a TAFKAL80ETC concert" then
-                        Items.[i] <- downgradeQuality Items.[i]
-                    else
-                        Items.[i] <- { Items.[i] with Quality   = (Items.[i].Quality  - Items.[i].Quality) } 
-                else
-                    if Items.[i].Quality < 50 then
-                        Items.[i] <- { Items.[i] with Quality   = (Items.[i].Quality + 1) }  
+            Items.[i] <- updateIfOutdated Items.[i]
         ()
 
 [<EntryPoint>]
