@@ -2,85 +2,82 @@
 
 open System.Collections.Generic
 
-type ItemQuality = int 
-
 type Item = { Name: string; SellIn: int; Quality: int }
 
-type ModifierRule = { CanModify : Item -> bool; Modify : Item->Item }
+type EvoluableItem =
+    | BasicItem of Item
+    | AgedBrie  of Item
+    | Backstage of Item
+    | Sulfuras  of Item
+    | UpdateError of string 
 
-type ModifierRules = ModifierRule list
+let substractQuality quality subs = (quality - subs) |> max 0
 
-let updateSellIn item = 
-    if item.Name <> "Sulfuras, Hand of Ragnaros" then                 
-        { Name = item.Name; SellIn  = (item.SellIn - 1); Quality = item.Quality } 
-    else 
-        item
+let addQuality quality add = (quality + add) |> min 50
 
-let downgradeQuality item = 
-    if item.Quality > 0 && item.Name <> "Sulfuras, Hand of Ragnaros" then
-        { Name = item.Name; SellIn = item.SellIn; Quality = item.Quality - 1 } 
-    else
-        item
+let updateSellInWithRule = function
+    | Sulfuras intenalItem  -> Sulfuras { intenalItem with SellIn = intenalItem.SellIn }
+    | BasicItem intenalItem -> BasicItem { intenalItem with SellIn = intenalItem.SellIn - 1 }
+    | AgedBrie intenalItem  -> AgedBrie { intenalItem with SellIn = intenalItem.SellIn - 1 }
+    | Backstage intenalItem -> Backstage { intenalItem with SellIn = intenalItem.SellIn - 1 }
+    | UpdateError msg       -> UpdateError msg
 
-let addOneQualityPoint item = { Name = item.Name; SellIn = item.SellIn; Quality = item.Quality+1}
-
-let modifyQuality modifer canModify item = 
-    if (canModify item) then
-        modifer item
-    else 
-        item
-
-let rec applyModifiersRulesQuality modifierRules item = 
-    match modifierRules with 
-        | head::tail -> 
-            if head.CanModify item then
-                head.Modify item |> applyModifiersRulesQuality tail
-            else
-                item
-        | [] -> item
-
-let updateIfOutdated item = 
+let basicItemQualityUpdater item =
+    let locUpdater = substractQuality item.Quality
     if item.SellIn < 0 then
-        match item.Name with
-            | "Aged Brie" -> 
-                if item.Quality < 50 then
-                    { item with Quality   = (item.Quality + 1) }
-                else
-                    item
-            | "Backstage passes to a TAFKAL80ETC concert" -> { item with Quality = 0 } 
-            | _ -> downgradeQuality item
+        locUpdater 2
     else
-        item
+        locUpdater 1
 
-let filterOverFiftyQuality item = item.Quality < 50
+let agedBrieQualityUpdater item =
+    let locUpdater = addQuality item.Quality
+    if item.SellIn < 0 then
+        locUpdater 2
+    else
+        locUpdater 1
 
-let filterBackStage item = item.Name = "Backstage passes to a TAFKAL80ETC concert"
+let backstageItemQualityUpdater item =
+    let locUpdater = addQuality item.Quality
+    if item.SellIn < 0 then
+        0
+    else if item.SellIn < 5 then
+        locUpdater 3
+    else if item.SellIn < 10 then
+        locUpdater 2
+    else 
+        locUpdater 1
 
-let filterSellIn value item = item.SellIn < value
+let sulfurasItemQualityUpdater item = item.Quality 
 
-let filter2State item = filterBackStage item && filterSellIn 11 item && filterOverFiftyQuality item
+let getQualityUpdater = function
+    | Sulfuras  internalItem -> (internalItem, fun () -> sulfurasItemQualityUpdater internalItem)
+    | BasicItem internalItem -> (internalItem, fun () -> basicItemQualityUpdater internalItem)
+    | AgedBrie  internalItem -> (internalItem, fun () -> agedBrieQualityUpdater internalItem)
+    | Backstage internalItem -> (internalItem, fun () -> backstageItemQualityUpdater internalItem)
+    | UpdateError msg        -> failwith msg
+         
+let getNewItem item =
+    let createNewItem item qualityUpdater =  
+        { Name = item.Name ; SellIn = item.SellIn ; Quality = qualityUpdater() }
+    item |> updateSellInWithRule |> getQualityUpdater ||> createNewItem 
 
-let filter3State item = filterSellIn 6 item && filterOverFiftyQuality item
+let createEvoluableItem item =
+    match item.Name with
+        | "Sulfuras, Hand of Ragnaros" -> Sulfuras item
+        | "Aged Brie" -> 
+            AgedBrie item
+        | "Backstage passes to a TAFKAL80ETC concert" -> 
+            Backstage item
+        | _ -> BasicItem item 
 
 type GildedRose(items:IList<Item>) =
     let Items = items
 
-    let specialItemRule = { CanModify = filterOverFiftyQuality; Modify = addOneQualityPoint }::
-                          { CanModify = filter2State; Modify = addOneQualityPoint }::
-                          { CanModify = filter3State; Modify = addOneQualityPoint }::[]
-
     member this.UpdateQuality() =
         for i = 0 to Items.Count - 1 do
-            // Standard item quality update
-            if Items.[i].Name <> "Aged Brie" && Items.[i].Name <> "Backstage passes to a TAFKAL80ETC concert" then
-                Items.[i] <- downgradeQuality Items.[i]
-            // Special item quality update
-            else
-                Items.[i] <- applyModifiersRulesQuality specialItemRule Items.[i]
-            // Update SellIn
-            Items.[i] <- (updateSellIn Items.[i])
-            // update quality for special item once again
-            Items.[i] <- updateIfOutdated Items.[i]
+            Items.[i] |> createEvoluableItem 
+                      |> getNewItem
+                      |> fun (item:Item) -> Items.[i] <- item
         ()
 
 [<EntryPoint>]
